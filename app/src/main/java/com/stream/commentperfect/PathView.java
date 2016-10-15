@@ -197,17 +197,29 @@ public class PathView extends View {
         }
 
         //如果有分数
-        if (nowPoint.x != 0) {
+        if (score != minScore - 1) {
             mAnotherPath.moveTo(startPoint.x, endPoint.y);
             mAnotherPath.addCircle(startPoint.x, startPoint.y, maxCircleSize, Path.Direction.CCW);
-            score = minScore;
+
             for (int i = 1; i < mPointList.size(); i++) {
+
                 Point p = mPointList.get(i);
+
+//                if (i < score - minScore + 1) {
+//                    mAnotherPath.lineTo(p.x - maxCircleSize, p.y);
+//                    mAnotherPath.addCircle(p.x, p.y, maxCircleSize, Path.Direction.CCW);
+//                } else if (i == score - minScore + 1){
+//
+//                } else {
+//
+//                }
+
+
+
                 if (nowPoint.x > p.x) {
                     mAnotherPath.lineTo(p.x - maxCircleSize, p.y);
                     mAnotherPath.addCircle(p.x, p.y, maxCircleSize, Path.Direction.CCW);
-                } else if (nowPoint.x == p.x) {
-                    score = i + minScore;
+                } else if (nowPoint.x == p.x ) {
                     mAnotherPath.lineTo(p.x - maxCircleSize, p.y);
                     mAnotherPath.addCircle(p.x, p.y, maxCircleSize, Path.Direction.CCW);
                 }else {
@@ -267,16 +279,13 @@ public class PathView extends View {
 
     private int nearPosition(MotionEvent event, float x, float y) {
 
-        if (x < startPoint.x - cr || x >endPoint.x + cr) {
-            return score;
-        }
 
         if (!stillMove && (y > startPoint.y + 50 || y < startPoint.y - 50)) {
             return score;
         }
 
         //设置点击的坐标
-        if (y > startPoint.y - 50 && y < startPoint.y + 50) {
+        if (y > startPoint.y - cr && y < startPoint.y + cr) {
             if (event.getAction() == MotionEvent.ACTION_MOVE || event.getAction() == MotionEvent.ACTION_DOWN) {
                 stillMove = true;
             }
@@ -288,50 +297,47 @@ public class PathView extends View {
             invalidate();
         }
 
-
-        // up的时候判断位置
-        if (event.getAction() == MotionEvent.ACTION_UP) {
-            stillMove = false;
-            if (nowPoint.x > startPoint.x - cr && nowPoint.x < endPoint.x + cr) {
-                int position = (((nowPoint.x - startPoint.x) / (gap / 2)) + 1 ) / 2;
-                nowPoint.x = mPointList.get(position).x;
-                Log.d("zccTest", "up :" + nowPoint.x);
-            }
-        }
-
         if (stillMove) {
-            if (x > nowPoint.x - 25 && x < nowPoint.x + 25) {
-                return score;
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                stillMove = false;
+                Log.d("zccTest", "up :" + nowPoint.x);
+                if (x <= startPoint.x - cr) {
+                    nowPoint.x = mPointList.get(0).x;
+                    score = minScore;
+                    invalidate();
+                    return score;
+                }
+                if (x >= endPoint.x + cr) {
+                    nowPoint.x = mPointList.get(maxScore - minScore).x;
+                    score = maxScore;
+                    invalidate();
+                    return score;
+                }
             }
         }
 
-        if (x > nowPoint.x - 25 && x < nowPoint.x + 25 && y > nowPoint.y - 25 && y < nowPoint.y + 25) {
+        if (x < startPoint.x - cr || x >endPoint.x + cr) {
             return score;
         }
 
 
 
-        // 查看分数有没有变化
-        if (mPointList != null) {
-            for (int i = 0; i < mPointList.size(); i++) {
-                Point p = mPointList.get(i);
-                if (p != null) {
-                    Log.d("zccTest", "p:" + i + ", " + p.x + ", " + p.y);
 
-                    if (x > p.x - 50 && x < p.x + 50 && y > p.y - 50 && y < p.y + 50) {
 
-                        return i + minScore;
-                    }
 
-                    if (stillMove) {
-                        if (x > p.x - 50 && x < p.x + 50) {
-                            return i + minScore;
-                        }
-                    }
-
-                }
+        // up的时候判断位置
+        if (event.getAction() == MotionEvent.ACTION_UP) {
+            stillMove = false;
+            Log.d("zccTest", "up :" + nowPoint.x);
+            if (nowPoint.x > startPoint.x - cr && nowPoint.x < endPoint.x + cr) {
+                int position = (((nowPoint.x - startPoint.x) / (gap / 2)) + 1 ) / 2;
+                nowPoint.x = mPointList.get(position).x;
+                score = position + minScore;
+                return score;
             }
         }
+
+
         return score;
     }
 
