@@ -74,6 +74,7 @@ public class PathView extends View {
     Point nowPoint;
     Point endPoint;
     int gap = 0;
+    int cr = 0;
 
 
     public PathView(Context context) {
@@ -176,7 +177,7 @@ public class PathView extends View {
         mAnotherPath.reset();
 
         // 实际半经
-        int cr = maxCircleSize + paintWidth / 2;
+        cr = maxCircleSize + paintWidth / 2;
         startPoint.x = cr;
         startPoint.y = getHeight() / 2;
         endPoint.x = getWidth() - cr;
@@ -196,25 +197,25 @@ public class PathView extends View {
         }
 
         //如果有分数
-        if (score != minScore - 1) {
+        if (nowPoint.x != 0) {
             mAnotherPath.moveTo(startPoint.x, endPoint.y);
             mAnotherPath.addCircle(startPoint.x, startPoint.y, maxCircleSize, Path.Direction.CCW);
-
+            score = minScore;
             for (int i = 1; i < mPointList.size(); i++) {
                 Point p = mPointList.get(i);
                 if (nowPoint.x > p.x) {
-                    mAnotherPath.lineTo(p.x - cr, p.y);
+                    mAnotherPath.lineTo(p.x - maxCircleSize, p.y);
                     mAnotherPath.addCircle(p.x, p.y, maxCircleSize, Path.Direction.CCW);
                 } else if (nowPoint.x == p.x) {
-                    mAnotherPath.lineTo(p.x - cr, p.y);
+                    score = i + minScore;
+                    mAnotherPath.lineTo(p.x - maxCircleSize, p.y);
                     mAnotherPath.addCircle(p.x, p.y, maxCircleSize, Path.Direction.CCW);
                 }else {
-                    mAnotherPath.lineTo(nowPoint.x, nowPoint.y);
-                    mPath.moveTo(nowPoint.x, nowPoint.y);
-
+                    mAnotherPath.lineTo(p.x - maxCircleSize, p.y);
+                    mPath.moveTo(nowPoint.x + cr, nowPoint.y);
                     for (int j = i; j < mPointList.size(); j++) {
                         Point jp = mPointList.get(j);
-                        mPath.lineTo(jp.x - cr, jp.y);
+                        mPath.lineTo(jp.x - maxCircleSize, jp.y);
                         mPath.addCircle(jp.x, jp.y, maxCircleSize, Path.Direction.CCW);
                     }
                     break;
@@ -266,7 +267,7 @@ public class PathView extends View {
 
     private int nearPosition(MotionEvent event, float x, float y) {
 
-        if (x < startPoint.x || x >endPoint.x) {
+        if (x < startPoint.x - cr || x >endPoint.x + cr) {
             return score;
         }
 
@@ -276,7 +277,7 @@ public class PathView extends View {
 
         //设置点击的坐标
         if (y > startPoint.y - 50 && y < startPoint.y + 50) {
-            if (event.getAction() == MotionEvent.ACTION_MOVE) {
+            if (event.getAction() == MotionEvent.ACTION_MOVE || event.getAction() == MotionEvent.ACTION_DOWN) {
                 stillMove = true;
             }
             nowPoint.x = (int) x;
@@ -291,7 +292,7 @@ public class PathView extends View {
         // up的时候判断位置
         if (event.getAction() == MotionEvent.ACTION_UP) {
             stillMove = false;
-            if (nowPoint.x > startPoint.x && nowPoint.x < endPoint.x) {
+            if (nowPoint.x > startPoint.x - cr && nowPoint.x < endPoint.x + cr) {
                 int position = (((nowPoint.x - startPoint.x) / (gap / 2)) + 1 ) / 2;
                 nowPoint.x = mPointList.get(position).x;
                 Log.d("zccTest", "up :" + nowPoint.x);
