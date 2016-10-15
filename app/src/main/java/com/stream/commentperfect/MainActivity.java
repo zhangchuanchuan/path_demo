@@ -19,7 +19,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         pathView = (PathView) findViewById(R.id.path_view);
         editText = (EditText) findViewById(R.id.input_score);
-        pathView.setMaxScore(10);
+        pathView.setMaxScore(3);
     }
 
     public void setSore(View view){

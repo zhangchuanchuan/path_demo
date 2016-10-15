@@ -1,5 +1,6 @@
 package com.stream.commentperfect;
 
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -30,8 +31,10 @@ public class PathView extends View {
     // 缓存的Point
     float lastX;
     float lastY;
-
+    // 灰色画笔
     Paint mPaint;
+    //红色画笔
+    Paint mAnotherPaint;
 
     Path mPath;
 
@@ -68,7 +71,9 @@ public class PathView extends View {
     private boolean stillMove;
 
     Point startPoint;
+    Point nowPoint;
     Point endPoint;
+    int gap = 0;
 
 
     public PathView(Context context) {
@@ -84,6 +89,9 @@ public class PathView extends View {
             return;
         }
         this.score = score;
+        Point p = mPointList.get(score - minScore);
+        nowPoint.set(p.x, p.y);
+
         invalidate();
     }
 
@@ -102,6 +110,10 @@ public class PathView extends View {
 
         if (startPoint == null) {
             startPoint = new Point();
+        }
+
+        if (nowPoint == null) {
+            nowPoint = new Point();
         }
 
         if (endPoint == null) {
@@ -132,6 +144,14 @@ public class PathView extends View {
             mPaint.setStrokeWidth(paintWidth);
         }
 
+        if (mAnotherPaint == null) {
+            mAnotherPaint = new Paint();
+            mAnotherPaint.setAntiAlias(true);
+            mAnotherPaint.setColor(selectColor);
+            mAnotherPaint.setStyle(Paint.Style.STROKE);
+            mAnotherPaint.setStrokeWidth(paintWidth);
+        }
+
         if (mPath == null) {
             mPath = new Path();
         }
@@ -155,9 +175,6 @@ public class PathView extends View {
         mPath.reset();
         mAnotherPath.reset();
 
-        int width = getWidth();
-        int height = getHeight();
-
         // 实际半经
         int cr = maxCircleSize + paintWidth / 2;
         startPoint.x = cr;
@@ -165,71 +182,56 @@ public class PathView extends View {
         endPoint.x = getWidth() - cr;
         endPoint.y = getHeight() / 2;
 
-
         int x = startPoint.x;
         int y = startPoint.y;
+        nowPoint.y = y;
 
-        int gap = (endPoint.x - startPoint.x) / (maxScore - minScore);
+        gap = (endPoint.x - startPoint.x) / (maxScore - minScore);
+
+        // 初始化所有点坐标
+        for (Point p : mPointList) {
+            p.x = x;
+            p.y = y;
+            x += gap;
+        }
 
         //如果有分数
         if (score != minScore - 1) {
-            mPaint.setColor(selectColor);
-
             mAnotherPath.moveTo(startPoint.x, endPoint.y);
-            int pointPosition = 0;
-            // 设置初始化点坐标
-            mPointList.get(pointPosition).x = startPoint.x;
-            mPointList.get(pointPosition).y = startPoint.y;
-
             mAnotherPath.addCircle(startPoint.x, startPoint.y, maxCircleSize, Path.Direction.CCW);
 
-            for (int i = minScore; i < score; i++) {
-                x += gap;
-                pointPosition ++;
-                mPointList.get(pointPosition).x = x;
-                mPointList.get(pointPosition).y = startPoint.y;
+            for (int i = 1; i < mPointList.size(); i++) {
+                Point p = mPointList.get(i);
+                if (nowPoint.x > p.x) {
+                    mAnotherPath.lineTo(p.x - cr, p.y);
+                    mAnotherPath.addCircle(p.x, p.y, maxCircleSize, Path.Direction.CCW);
+                } else if (nowPoint.x == p.x) {
+                    mAnotherPath.lineTo(p.x - cr, p.y);
+                    mAnotherPath.addCircle(p.x, p.y, maxCircleSize, Path.Direction.CCW);
+                }else {
+                    mAnotherPath.lineTo(nowPoint.x, nowPoint.y);
+                    mPath.moveTo(nowPoint.x, nowPoint.y);
 
-                mAnotherPath.lineTo(x - maxCircleSize, y);
-                mAnotherPath.addCircle(x, y, maxCircleSize, Path.Direction.CCW);
+                    for (int j = i; j < mPointList.size(); j++) {
+                        Point jp = mPointList.get(j);
+                        mPath.lineTo(jp.x - cr, jp.y);
+                        mPath.addCircle(jp.x, jp.y, maxCircleSize, Path.Direction.CCW);
+                    }
+                    break;
+                }
+
             }
-
-            canvas.drawPath(mAnotherPath, mPaint);
-
-            mPath.moveTo(x + cr, y);
-
-            mPaint.setColor(defaultColor);
-
-            for (int i = score; i < maxScore; i++) {
-                x += gap;
-                pointPosition ++;
-                mPointList.get(pointPosition).x = x;
-                mPointList.get(pointPosition).y = startPoint.y;
-
-                mPath.lineTo(x - maxCircleSize, y);
-                mPath.addCircle(x, y, maxCircleSize, Path.Direction.CCW);
-            }
-
-            canvas.drawPath(mPath, mPaint);              // 绘制Path
-
-
+            canvas.drawPath(mAnotherPath, mAnotherPaint);
+            canvas.drawPath(mPath, mPaint);
         } else {
-
-            int pointPosition = 0;
-            // 设置初始化点坐标
-            mPointList.get(pointPosition).x = startPoint.x;
-            mPointList.get(pointPosition).y = startPoint.y;
 
             mPath.moveTo(startPoint.x, endPoint.y);
             mPath.addCircle(startPoint.x, startPoint.y, maxCircleSize, Path.Direction.CCW);
 
-            for (int i = minScore; i < maxScore; i++) {
-                x += gap;
-                mPath.lineTo(x - maxCircleSize, y);
-                mPath.addCircle(x, y, maxCircleSize, Path.Direction.CCW);
-                pointPosition ++;
-                mPointList.get(pointPosition).x = x;
-                mPointList.get(pointPosition).y = startPoint.y;
-
+            for (int i = 1; i < circleNumber; i++) {
+                Point p = mPointList.get(i);
+                mPath.lineTo(p.x - maxCircleSize, y);
+                mPath.addCircle(p.x, y, maxCircleSize, Path.Direction.CCW);
             }
             canvas.drawPath(mPath, mPaint);              // 绘制Path
         }
@@ -241,8 +243,8 @@ public class PathView extends View {
 
         // 离开
         if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_DOWN) {
-            stillMove = false;
-            int nowScore = nearPostion(event.getX(), event.getY());
+
+            int nowScore = nearPosition(event, event.getX(), event.getY());
             if (score != nowScore) {
                 setScore(nowScore);
             }
@@ -251,36 +253,77 @@ public class PathView extends View {
 
         // 移动
         if (event.getAction() == MotionEvent.ACTION_MOVE) {
-            int nowScore = nearPostion(event.getX(), event.getY());
+            int nowScore = nearPosition(event, event.getX(), event.getY());
             if (score != nowScore) {
                 setScore(nowScore);
             }
         }
+
+
+
         return true;
     }
 
-    private int nearPostion(float x, float y) {
+    private int nearPosition(MotionEvent event, float x, float y) {
 
-        if (x > lastX - 25 && x < lastX + 25 && y > lastY - 25 && y < lastY + 25) {
+        if (x < startPoint.x || x >endPoint.x) {
             return score;
         }
+
+        if (!stillMove && (y > startPoint.y + 50 || y < startPoint.y - 50)) {
+            return score;
+        }
+
+        //设置点击的坐标
+        if (y > startPoint.y - 50 && y < startPoint.y + 50) {
+            if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                stillMove = true;
+            }
+            nowPoint.x = (int) x;
+            invalidate();
+        } else if (stillMove) {
+            nowPoint.x = (int) x;
+            Log.d("zccTest", "x:"+x);
+            invalidate();
+        }
+
+
+        // up的时候判断位置
+        if (event.getAction() == MotionEvent.ACTION_UP) {
+            stillMove = false;
+            if (nowPoint.x > startPoint.x && nowPoint.x < endPoint.x) {
+                int position = (((nowPoint.x - startPoint.x) / (gap / 2)) + 1 ) / 2;
+                nowPoint.x = mPointList.get(position).x;
+                Log.d("zccTest", "up :" + nowPoint.x);
+            }
+        }
+
+        if (stillMove) {
+            if (x > nowPoint.x - 25 && x < nowPoint.x + 25) {
+                return score;
+            }
+        }
+
+        if (x > nowPoint.x - 25 && x < nowPoint.x + 25 && y > nowPoint.y - 25 && y < nowPoint.y + 25) {
+            return score;
+        }
+
+
+
+        // 查看分数有没有变化
         if (mPointList != null) {
             for (int i = 0; i < mPointList.size(); i++) {
                 Point p = mPointList.get(i);
                 if (p != null) {
-                    Log.d("testCall", "p:" + i + ", " + p.x + ", " + p.y);
+                    Log.d("zccTest", "p:" + i + ", " + p.x + ", " + p.y);
 
                     if (x > p.x - 50 && x < p.x + 50 && y > p.y - 50 && y < p.y + 50) {
-                        lastX = x;
-                        lastY = y;
-                        stillMove = true;
+
                         return i + minScore;
                     }
 
                     if (stillMove) {
                         if (x > p.x - 50 && x < p.x + 50) {
-                            lastX = x;
-                            lastY = y;
                             return i + minScore;
                         }
                     }
@@ -289,6 +332,12 @@ public class PathView extends View {
             }
         }
         return score;
+    }
+
+
+
+    public void startAnimation(){
+//        ObjectAnimator
     }
 
 }
